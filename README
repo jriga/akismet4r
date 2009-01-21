@@ -1,0 +1,21 @@
+Ruby Library for Akismet Web API (http://akismet.com/development/api/)
+
+Dependency:
+  - rest_client
+
+
+Usage:
+
+Akismet4r::Config.setup do |c|
+  c.key = 'Der2345nklDF'
+  c.blog = 'http://my_blog.com'
+end
+
+class Comment
+  include Akismet4r
+end
+
+comment = Comment.new
+comment.spam?(:user_agent => 'Mozilla/5.0 Firefox/3.0.5', :user_ip => 'xxx.xxx.xxx.xxx') # => true | false | Error
+comment.spam! # => true | false | Error
+comment.ham! # => true | false | Error
