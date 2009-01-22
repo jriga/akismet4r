@@ -95,20 +95,20 @@ module Akismet4r
       payload = {
         :blog => ::Akismet4r::Config[:blog],
         :comment_type => self.class.name,
-        :comment_author => map_on(:comment_author) || comment_author,
-        :comment_author_email =>  map_on(:comment_author_email) || comment_author_email,
-        :comment_author_url =>  map_on(:comment_author_url) || comment_author_url,
-        :comment_content =>  map_on(:comment_content) || comment_content
+        :comment_author => map_on(:comment_author),
+        :comment_author_email => map_on(:comment_author_email),
+        :comment_author_url => map_on(:comment_author_url),
+        :comment_content => map_on(:comment_content)
       }
       payload.merge(server)
     end
 
     def map_on(name)
       if self.class.hash.has_key?(name)
-        value = self.send(self.class.hash[name])
-        raise Akismet4r::MappingError unless value
-        value
+        raise Akismet4r::MappingError unless self.respond_to?(self.class.hash[name])
+        return self.send(self.class.hash[name])
       end
+      self.send(name)
     end
   end
 end

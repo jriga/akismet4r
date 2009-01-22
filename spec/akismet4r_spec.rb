@@ -54,6 +54,13 @@ describe "Akismet4r" do
       map :comment_author_url, :url
       map :comment_content, :text
     end
+
+    class BadFoo
+      attr_accessor :author
+      include Akismet4r
+
+      map :comment_author, :unknown
+    end
     
     before do
       Akismet4r::Config.setup {|c| c.blog = 'http://my_blog.com' }
@@ -78,9 +85,25 @@ describe "Akismet4r" do
       @foo.send(:data).should == expected_payload
     end
 
-    it "should raise on bogus custom mapping" do
+    it "should use user defined mappings to build payload even when nil" do
       @foo.author = nil
-      lambda { @foo.send(:data) }.should raise_error(Akismet4r::MappingError)
+
+      expected_payload = {
+          :blog => 'http://my_blog.com', 
+          :comment_type => 'Foo',
+          :comment_author => nil,
+          :comment_author_email => 'jriga@lamit.com',
+          :comment_author_url => 'http://www.lamit.com',
+          :comment_content => 'blah '* 10
+      }
+ 
+      @foo.send(:data).should == expected_payload
+    end
+
+
+    it "should raise on bogus custom mapping" do
+      bad_foo = BadFoo.new
+      lambda { bad_foo.send(:data) }.should raise_error(Akismet4r::MappingError)
     end
   end
 
@@ -202,6 +225,22 @@ describe "Akismet4r" do
  
         @bar.send(:data).should == expected_payload
       end
+
+      it "should build payload from default fields even when nil" do
+        @bar.comment_author = nil
+
+        expected_payload = {
+          :blog => 'http://my_blog.com', 
+          :comment_type => 'Bar',
+          :comment_author => nil, 
+          :comment_author_email => 'jriga@lamit.com',
+          :comment_author_url => 'http://www.lamit.com',
+          :comment_content => 'blah '* 10
+        }
+ 
+        @bar.send(:data).should == expected_payload
+      end
+
 
       it "should build payload with server params" do
         expected_payload = {
