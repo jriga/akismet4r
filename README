@@ -3,19 +3,41 @@ Ruby Library for Akismet Web API (http://akismet.com/development/api/)
 Dependency:
   - rest_client
 
+-----------------------------------------------------------------------------------------------------------------
 
-Usage:
+Configuration:
 
 Akismet4r::Config.setup do |c|
   c.key = 'Der2345nklDF'
   c.blog = 'http://my_blog.com'
 end
 
+
+
+By default Akismet4r assumes the instance to have the following methods:
+
 class Comment
+  attr_accessor :comment_author, :comment_author_email, :comment_author_url, :comment_content
   include Akismet4r
 end
 
+if not, use custom mapping
+
+class Comment
+  attr_accessor :author, :email, :text, :url
+  include Akismet4r
+
+  map :comment_author,        :author
+  map :comment_author_email,  :email
+  map :comment_author_url,    :url
+  map :comment_content,       :text
+end
+
+
+
+Usage:
+
 comment = Comment.new
-comment.spam?(:user_agent => 'Mozilla/5.0 Firefox/3.0.5', :user_ip => 'xxx.xxx.xxx.xxx') # => true | false | Error
-comment.spam! # => true | false | Error
-comment.ham! # => true | false | Error
+comment.spam?(:user_agent => 'Mozilla/5.0 Firefox/3.0.5', :user_ip => 'xxx.xxx.xxx.xxx')  # => true | false | Error
+comment.spam!(:user_agent => 'Mozilla/5.0 Firefox/3.0.5', :user_ip => 'xxx.xxx.xxx.xxx')  # => true | false | Error
+comment.ham!(:user_agent => 'Mozilla/5.0 Firefox/3.0.5', :user_ip => 'xxx.xxx.xxx.xxx')   # => true | false | Error
