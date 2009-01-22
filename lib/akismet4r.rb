@@ -9,6 +9,8 @@ module Akismet4r
   VERSION = '2009-01-21'
 
   class MappingError < ::Exception; end
+  class FieldMissing < ::Exception; end
+  class KeyVerificationFailed < ::Exception; end
   
   module Config
     class << self
@@ -33,12 +35,12 @@ module Akismet4r
       end
       
       def api_key
-        raise "You must provide an api-key" unless @api_key
+        raise FieldMissing.new("You must provide an api-key") unless @api_key
         @api_key
       end
 
       def blog
-        raise 'You must provide your blog full uri' unless @blog
+        raise FieldMissing.new('You must provide your blog full uri') unless @blog
         @blog
       end
     end
@@ -46,7 +48,7 @@ module Akismet4r
   
   def verify_key
     Config.config.key_verified = (::RestClient.post("#{Config[:host]}:#{Config[:port]}/#{Config[:version]}/verify-key",{:key => Config[:api_key], :blog => Config[:blog]}) == 'valid')
-    raise 'Your key has not been verified' unless Config[:key_verified]
+    raise KeyVerificationFailed.new("Your key #{Config[:api_key]} has not been verified") unless Config[:key_verified]
   end
 
   def akismet
@@ -85,7 +87,7 @@ module Akismet4r
 
     private 
     def request(method, attrs={})
-      raise ArgumentError unless attrs[:user_ip] && attrs[:user_agent]
+      raise FieldMissing.new("user_ip or user_agent missing from #{attrs}") unless attrs[:user_ip] && attrs[:user_agent]
       akismet[method].post(data.merge(attrs), :user_agent => ::Akismet4r::Config[:user_agent]) == 'true'
     end
 

@@ -12,8 +12,8 @@ describe "Akismet4r" do
       Akismet4r::Config.config.key_verified.should be_false
       Akismet4r::Config.config.user_agent.should == 'Akismet4r 2009-01-21'
 
-      lambda {Akismet4r::Config.config.api_key}.should raise_error
-      lambda {Akismet4r::Config.config.blog}.should raise_error
+      lambda {Akismet4r::Config.config.api_key}.should raise_error(Akismet4r::FieldMissing)
+      lambda {Akismet4r::Config.config.blog}.should raise_error(Akismet4r::FieldMissing)
 
       Akismet4r::Config[:host].should == 'rest.akismet.com'
       Akismet4r::Config[:port].should == 80
@@ -21,8 +21,8 @@ describe "Akismet4r" do
       Akismet4r::Config[:key_verified].should be_false
       Akismet4r::Config[:user_agent].should == 'Akismet4r 2009-01-21'
 
-      lambda {Akismet4r::Config[:api_key]}.should raise_error
-      lambda {Akismet4r::Config[:blog]}.should raise_error
+      lambda {Akismet4r::Config[:api_key]}.should raise_error(Akismet4r::FieldMissing)
+      lambda {Akismet4r::Config[:blog]}.should raise_error(Akismet4r::FieldMissing)
     end
 
     it "should setup options" do
@@ -109,7 +109,7 @@ describe "Akismet4r" do
     it "should verify api-key" do
       ::RestClient.should_receive(:post).and_return('invalid')
       baz = Baz.new
-      lambda {baz.send(:verify_key)}.should raise_error
+      lambda {baz.send(:verify_key)}.should raise_error(Akismet4r::KeyVerificationFailed)
       Akismet4r::Config[:key_verified].should be_false
     end
 
@@ -143,12 +143,12 @@ describe "Akismet4r" do
     describe '#request,spam?,spam!,ham!' do
       it "should check user_ip present" do
         bar = Bar.new
-        lambda { foo.spam?(:user_agent => 'Firefox') }.should raise_error
+        lambda { bar.spam?(:user_agent => 'Firefox') }.should raise_error(Akismet4r::FieldMissing)
       end
 
       it "should check user_agent present" do
         bar = Bar.new
-        lambda { foo.spam?(:user_ip => '212.32.122.45') }.should raise_error
+        lambda { bar.spam?(:user_ip => '212.32.122.45') }.should raise_error(Akismet4r::FieldMissing)
       end
 
 
