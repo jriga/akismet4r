@@ -54,16 +54,18 @@ describe "Akismet4r" do
       map :comment_author_url, :url
       map :comment_content, :text
     end
-
-    it "should use user defined mappings to build payload" do
+    
+    before do
       Akismet4r::Config.setup {|c| c.blog = 'http://my_blog.com' }
 
-      foo = Foo.new
-      foo.author = 'jriga'
-      foo.email = 'jriga@lamit.com'
-      foo.url = 'http://www.lamit.com'
-      foo.text = 'blah '*10
+     @foo = Foo.new
+     @foo.author = 'jriga'
+     @foo.email = 'jriga@lamit.com'
+     @foo.url = 'http://www.lamit.com'
+     @foo.text = 'blah '*10
+    end
 
+    it "should use user defined mappings to build payload" do
       expected_payload = {
           :blog => 'http://my_blog.com', 
           :comment_type => 'Foo',
@@ -73,12 +75,17 @@ describe "Akismet4r" do
           :comment_content => 'blah '* 10
       }
  
-      foo.send(:data).should == expected_payload
+      @foo.send(:data).should == expected_payload
+    end
+
+    it "should raise on bogus custom mapping" do
+      @foo.author = nil
+      lambda { @foo.send(:data) }.should raise_error(Akismet4r::MappingError)
     end
   end
 
   describe '#verify_key' do
-    class Foo
+    class Baz
       include Akismet4r
     end
 
@@ -94,22 +101,22 @@ describe "Akismet4r" do
 
     it "should verify api-key" do
       ::RestClient.should_receive(:post).with('http://localhost:6000/1.2/verify-key', {:key => '1234g54w5g54', :blog =>'http://blog.com'}).and_return('valid')
-      foo = Foo.new
-      foo.send(:verify_key)
+      baz = Baz.new
+      baz.send(:verify_key)
       Akismet4r::Config[:key_verified].should be_true
     end
 
     it "should verify api-key" do
       ::RestClient.should_receive(:post).and_return('invalid')
-      foo = Foo.new
-      lambda {foo.send(:verify_key)}.should raise_error
+      baz = Baz.new
+      lambda {baz.send(:verify_key)}.should raise_error
       Akismet4r::Config[:key_verified].should be_false
     end
 
   end
 
   describe "::InstanceMethods" do
-    class Foo
+    class Bar 
       attr_accessor :comment_author, :comment_author_email, :comment_author_url, :comment_content
       include Akismet4r
     end
@@ -128,45 +135,45 @@ describe "Akismet4r" do
     
     it "should verify key" do
       Akismet4r::Config.setup {|c| c.key_verified = false}
-      foo = Foo.new
-      foo.should_receive(:verify_key).and_return(true)
-      foo.spam?(:user_ip => '212.32.122.45', :user_agent => 'Firefox')
+      bar = Bar.new
+      bar.should_receive(:verify_key).and_return(true)
+      bar.spam?(:user_ip => '212.32.122.45', :user_agent => 'Firefox')
     end
 
     describe '#request,spam?,spam!,ham!' do
       it "should check user_ip present" do
-        foo = Foo.new
+        bar = Bar.new
         lambda { foo.spam?(:user_agent => 'Firefox') }.should raise_error
       end
 
       it "should check user_agent present" do
-        foo = Foo.new
+        bar = Bar.new
         lambda { foo.spam?(:user_ip => '212.32.122.45') }.should raise_error
       end
 
 
       it "should detect spam" do
         @akismet.should_receive(:post).and_return('true')
-        foo = Foo.new
-        foo.spam!(:user_ip => '212.32.122.45', :user_agent => 'Firefox').should be_true
+        bar = Bar.new
+        bar.spam!(:user_ip => '212.32.122.45', :user_agent => 'Firefox').should be_true
       end
 
       it "should detect non spam" do
         @akismet.should_receive(:post).and_return('false')
-        foo = Foo.new
-        foo.ham!(:user_ip => '212.32.122.45', :user_agent => 'Firefox').should be_false
+        bar = Bar.new
+        bar.ham!(:user_ip => '212.32.122.45', :user_agent => 'Firefox').should be_false
       end
     end
 
-        describe '#data' do
+    describe '#data' do
       before do
         Akismet4r::Config.setup {|c| c.blog = 'http://my_blog.com' }
 
-        @foo = Foo.new
-        @foo.comment_author = 'jriga'
-        @foo.comment_author_email = 'jriga@lamit.com'
-        @foo.comment_author_url = 'http://www.lamit.com'
-        @foo.comment_content = 'blah '*10
+        @bar = Bar.new
+        @bar.comment_author = 'jriga'
+        @bar.comment_author_email = 'jriga@lamit.com'
+        @bar.comment_author_url = 'http://www.lamit.com'
+        @bar.comment_content = 'blah '*10
         
         @server = {
           "PATH_INFO"=>"/", 
@@ -186,20 +193,20 @@ describe "Akismet4r" do
       it "should build payload from default fields" do
         expected_payload = {
           :blog => 'http://my_blog.com', 
-          :comment_type => 'Foo',
+          :comment_type => 'Bar',
           :comment_author => 'jriga',
           :comment_author_email => 'jriga@lamit.com',
           :comment_author_url => 'http://www.lamit.com',
           :comment_content => 'blah '* 10
         }
  
-        @foo.send(:data).should == expected_payload
+        @bar.send(:data).should == expected_payload
       end
 
       it "should build payload with server params" do
         expected_payload = {
           :blog => 'http://my_blog.com', 
-          :comment_type => 'Foo',
+          :comment_type => 'Bar',
           :comment_author => 'paul',
           :comment_author_email => 'jriga@lamit.com',
           :comment_author_url => 'http://www.lamit.com',
@@ -229,7 +236,7 @@ describe "Akismet4r" do
           :permalink => 'http://blog.com/posts/2009/01/21/first-entry'
         }.merge(@server)
 
-        @foo.send(:data,server).should == expected_payload
+        @bar.send(:data,server).should == expected_payload
       end
     end
   end

@@ -7,6 +7,8 @@ require 'rest_client'
 
 module Akismet4r
   VERSION = '2009-01-21'
+
+  class MappingError < ::Exception; end
   
   module Config
     class << self
@@ -91,12 +93,20 @@ module Akismet4r
       payload = {
         :blog => ::Akismet4r::Config[:blog],
         :comment_type => self.class.name,
-        :comment_author => self.send(self.class.hash[:comment_author]) || comment_author,
-        :comment_author_email => self.send(self.class.hash[:comment_author_email]) || comment_author_email,
-        :comment_author_url => self.send(self.class.hash[:comment_author_url]) || comment_author_url,
-        :comment_content => self.send(self.class.hash[:comment_content]) || comment_content
+        :comment_author => map_on(:comment_author) || comment_author,
+        :comment_author_email =>  map_on(:comment_author_email) || comment_author_email,
+        :comment_author_url =>  map_on(:comment_author_url) || comment_author_url,
+        :comment_content =>  map_on(:comment_content) || comment_content
       }
       payload.merge(server)
+    end
+
+    def map_on(name)
+      if self.class.hash.has_key?(name)
+        value = self.send(self.class.hash[name])
+        raise Akismet4r::MappingError unless value
+        value
+      end
     end
   end
 end
