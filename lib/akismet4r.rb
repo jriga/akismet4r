@@ -43,7 +43,7 @@ module Akismet4r
   end
   
   def verify_key
-    Config.config.key_verified = (::RestClient.post("#{Config[:host]}:#{Config[:port]}/#{Config[:version]}",{:key => Config[:api_key], :blog => Config[:blog]}) == 'valid')
+    Config.config.key_verified = (::RestClient.post("#{Config[:host]}:#{Config[:port]}/#{Config[:version]}/verify-key",{:key => Config[:api_key], :blog => Config[:blog]}) == 'valid')
     raise 'Your key has not been verified' unless Config[:key_verified]
   end
 

@@ -86,11 +86,14 @@ describe "Akismet4r" do
       Akismet4r::Config.setup do |c|
         c.api_key = '1234g54w5g54'
         c.blog = 'http://blog.com'
+        c.host = 'http://localhost'
+        c.port = 6000
+        c.version = '1.2'
       end
     end
 
     it "should verify api-key" do
-      ::RestClient.should_receive(:post).and_return('valid')
+      ::RestClient.should_receive(:post).with('http://localhost:6000/1.2/verify-key', {:key => '1234g54w5g54', :blog =>'http://blog.com'}).and_return('valid')
       foo = Foo.new
       foo.send(:verify_key)
       Akismet4r::Config[:key_verified].should be_true
