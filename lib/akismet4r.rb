@@ -41,9 +41,15 @@ module Akismet4r
       end
     end
   end
+  
+  def verify_key
+    Config.config.key_verified = (::RestClient.post("#{Config[:host]}:#{Config[:port]}/#{Config[:version]}",{:key => Config[:api_key], :blog => Config[:blog]}) == 'valid')
+    raise 'Your key has not been verified' unless Config[:key_verified]
+  end
 
   def akismet
     ::RestClient.log = Config[:log] if ::RestClient.log != Config[:log]
+    verify_key unless Config[:key_verified]
     @akismet ||= ::RestClient::Resource.new("#{Config[:api_key]}.#{Config[:host]}:#{Config[:port]}/#{Config[:version]}/")
   end
 
@@ -64,18 +70,23 @@ module Akismet4r
 
   module InstanceMethods
     def spam?(attrs={})
-      akismet['comment-check'].post(data.merge(attrs), :user_agent => ::Akismet4r::Config[:user_agent]) == 'true'
+      request('comment-check', attrs)
     end
 
     def spam!(attrs={})
-      akismet['submit-spam'].post(data.merge(attrs), :user_agent => ::Akismet4r::Config[:user_agent]) == 'true'
+      request('submit-spam', attrs)
     end
 
     def ham!(attrs={})
-      akismet['submit-ham'].post(data.merge(attrs), :user_agent => ::Akismet4r::Config[:user_agent]) == 'true'
+      request('submit-ham', attrs)
     end
 
     private 
+    def request(method, attrs={})
+      raise ArgumentError unless attrs[:user_ip] && attrs[:user_agent]
+      akismet[method].post(data.merge(attrs), :user_agent => ::Akismet4r::Config[:user_agent]) == 'true'
+    end
+
     def data(server={})
       payload = {
         :blog => ::Akismet4r::Config[:blog],
@@ -88,29 +99,4 @@ module Akismet4r
       payload.merge(server)
     end
   end
-
 end
-
-# Akismet4r::Config.setup do |c|
-#   c.host = 'http://akismet.com' 
-#   c.port = 8080
-#   c.key = 'Der2345nklDF'
-#   c.blog_uri = 'http://my_blog.com'
-# end
-
-# class Comment
-#   include Akismet4r
-# end
-
-# user_ip (required)
-# user_agent (required)
-# referrer (note spelling)
-# permalink
-# other
-
-# comment = Comment.new
-# comment.spam?(:user_ip => '', :user_agent => '') # => true | false | Akismet4r::Error
-
-# comment.spam! # => true | Akismet4r::Error
-
-# comment.ham! # => 

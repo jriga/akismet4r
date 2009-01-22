@@ -77,6 +77,34 @@ describe "Akismet4r" do
     end
   end
 
+  describe '#verify_key' do
+    class Foo
+      include Akismet4r
+    end
+
+     before do
+      Akismet4r::Config.setup do |c|
+        c.api_key = '1234g54w5g54'
+        c.blog = 'http://blog.com'
+      end
+    end
+
+    it "should verify api-key" do
+      ::RestClient.should_receive(:post).and_return('valid')
+      foo = Foo.new
+      foo.send(:verify_key)
+      Akismet4r::Config[:key_verified].should be_true
+    end
+
+    it "should verify api-key" do
+      ::RestClient.should_receive(:post).and_return('invalid')
+      foo = Foo.new
+      lambda {foo.send(:verify_key)}.should raise_error
+      Akismet4r::Config[:key_verified].should be_false
+    end
+
+  end
+
   describe "::InstanceMethods" do
     class Foo
       attr_accessor :comment_author, :comment_author_email, :comment_author_url, :comment_content
@@ -87,71 +115,47 @@ describe "Akismet4r" do
       Akismet4r::Config.setup do |c|
         c.api_key = '1234g54w5g54'
         c.blog = 'http://blog.com'
+        c.key_verified = true
       end
 
       @akismet = ::RestClient::Resource.new("http://example.com")
       ::RestClient::Resource.should_receive(:new).any_number_of_times.and_return(@akismet)
+      @akismet.stub!(:post).and_return('true')
+    end
+    
+    it "should verify key" do
+      Akismet4r::Config.setup {|c| c.key_verified = false}
+      foo = Foo.new
+      foo.should_receive(:verify_key).and_return(true)
+      foo.spam?(:user_ip => '212.32.122.45', :user_agent => 'Firefox')
     end
 
-    describe '#spam?' do
-      it "should available" do
+    describe '#request,spam?,spam!,ham!' do
+      it "should check user_ip present" do
         foo = Foo.new
-        foo.respond_to?(:spam?).should be_true
+        lambda { foo.spam?(:user_agent => 'Firefox') }.should raise_error
       end
+
+      it "should check user_agent present" do
+        foo = Foo.new
+        lambda { foo.spam?(:user_ip => '212.32.122.45') }.should raise_error
+      end
+
 
       it "should detect spam" do
         @akismet.should_receive(:post).and_return('true')
         foo = Foo.new
-        foo.spam?.should be_true
+        foo.spam!(:user_ip => '212.32.122.45', :user_agent => 'Firefox').should be_true
       end
 
       it "should detect non spam" do
         @akismet.should_receive(:post).and_return('false')
         foo = Foo.new
-        foo.spam?.should be_false
+        foo.ham!(:user_ip => '212.32.122.45', :user_agent => 'Firefox').should be_false
       end
     end
 
-    describe '#spam!' do
-      it "should provide spam!" do
-        foo = Foo.new
-        foo.respond_to?(:spam!).should be_true
-      end
-            it "should detect spam" do
-        @akismet.should_receive(:post).and_return('true')
-        foo = Foo.new
-        foo.spam!.should be_true
-      end
-
-      it "should detect non spam" do
-        @akismet.should_receive(:post).and_return('false')
-        foo = Foo.new
-        foo.spam!.should be_false
-      end
-
-    end
-
-    describe '#ham!' do
-      it "should provide ham!" do
-        foo = Foo.new
-        foo.respond_to?(:ham!).should be_true
-      end
-
-      it "should detect spam" do
-        @akismet.should_receive(:post).and_return('true')
-        foo = Foo.new
-        foo.ham!.should be_true
-      end
-
-      it "should detect non spam" do
-        @akismet.should_receive(:post).and_return('false')
-        foo = Foo.new
-        foo.ham!.should be_false
-      end
-
-    end
-
-    describe '#data' do
+        describe '#data' do
       before do
         Akismet4r::Config.setup {|c| c.blog = 'http://my_blog.com' }
 
